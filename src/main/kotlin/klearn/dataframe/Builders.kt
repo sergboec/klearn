@@ -12,3 +12,5 @@ class DataFrameInplaceBuilder(private val header: List<String>) {
         TODO()
     }
 }
+
+fun fromCSV(path: String, header: Boolean = true, sep: Char = ','): DataFrame = TODO()

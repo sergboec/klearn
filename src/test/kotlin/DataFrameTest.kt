@@ -24,7 +24,7 @@ class DataFrameTest {
                 30, 3, 0.3
         )
 
-        df.select("y", "p").transform {
+        df["y", "p"].transform {
             rowOf(it["y"].typed(Int::class) * it["p"].typed(Double::class))
         }
     }
