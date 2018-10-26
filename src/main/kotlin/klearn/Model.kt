@@ -1,6 +1,6 @@
 package klearn
 
 interface Model {
-    fun fit(df: DataFrame, col: Column)
-    fun predict(data: DataFrame): Column
+    fun fit(df: DataFrame, col: Column<*>)
+    fun predict(data: DataFrame): Column<*>
 }

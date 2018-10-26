@@ -1,5 +1,7 @@
-import klearn.dataframe.dataFrameOf
-import klearn.dataframe.rowOf
+package klearn.models
+
+import klearn.backend.jvm.dataFrameOf
+import klearn.backend.jvm.rowOf
 import org.junit.Assert
 import org.junit.Test
 
@@ -12,8 +14,8 @@ class DataFrameTest {
         )
 
         val yearNow = 2018
-        val df1 = df + df["birthYear"].typed(Int::class).map { yearNow - it }.alias("age")
-        Assert.assertEquals(listOf(2018 - 1979, 2018 - 1992), df1["age"].typed(Int::class).toList())
+        val df1 = df + df["birthYear"].cast<Int>().map { c: Int -> yearNow - c }.alias("age")
+        Assert.assertEquals(listOf(2018 - 1979, 2018 - 1992), df1["age"].cast<Int>().toList())
     }
 
     @Test
@@ -25,7 +27,7 @@ class DataFrameTest {
         )
 
         df["y", "p"].transform {
-            rowOf(it["y"].typed(Int::class) * it["p"].typed(Double::class))
+            rowOf(it["y"].cast<Int>() * it["p"].cast<Double>())
         }
     }
 }

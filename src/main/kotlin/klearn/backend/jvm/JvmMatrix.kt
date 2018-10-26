@@ -1,6 +1,7 @@
 package klearn.backend.jvm
 
 import klearn.Dimension
+import klearn.Column
 import klearn.linalg.Matrix
 import klearn.linalg.Vector
 import java.lang.IllegalArgumentException
@@ -84,5 +85,8 @@ internal class DoubleVector(n: Int, isColumnVector: Boolean, init: (Int) -> Doub
     override fun dot(other: Vector<Double>): Double {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
+}
 
+fun <T: Number> Column<T>.toVector(): Vector<T> {
+    TODO()
 }
