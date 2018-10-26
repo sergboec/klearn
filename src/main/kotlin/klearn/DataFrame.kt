@@ -32,9 +32,16 @@ interface Column<out T> {
     val name: String
 
     fun <R> map(f: (T) -> R): Column<R>
+    fun map(f: (T) -> Double?): DoubleColumn
+    fun map(f: (T) -> Int?): IntColumn
+    fun map(f: (T) -> Long?): LongColumn
     fun alias(name: String): Column<T>
     fun toList(): List<T>
     fun <T> cast(): Column<T>
 }
+
+interface DoubleColumn: Column<Double>
+interface IntColumn: Column<Int>
+interface LongColumn: Column<Long>
 
 fun DataFrame.split(fraction: Double): Pair<DataFrame, DataFrame> = TODO()

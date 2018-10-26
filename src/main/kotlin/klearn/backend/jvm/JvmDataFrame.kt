@@ -51,32 +51,78 @@ internal class JvmDataFrame(build: () -> List<Column<*>>): DataFrame {
     }
 }
 
-open class JvmColumn<out T>(override val name: String, build: () -> List<T>): Column<T> {
-    @Suppress("UNCHECKED_CAST")
-    override fun <R> cast(): Column<R> {
-        return this as Column<R>
+abstract class JvmAbstractColumn<out T>: Column<T> {
+    abstract val iterator: Iterator<T>
+
+    override fun <R> map(f: (T) -> R): Column<R> {
+        return iterator
     }
 
-    val data = build()
+    override fun map(f: (T) -> Double): DoubleColumn {
+        val store = DoubleArray(size)
+        var index = 0
+        iterator.forEach { store[index ++] = f(it) }
+        return JvmDoubleColumn(name, store)
+    }
+
+    override fun map(f: (T) -> Int): IntColumn {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun map(f: (T) -> Long): LongColumn {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+}
+
+class JvmObjectColumn(override val name: String, private val data: List<*>): JvmAbstractColumn<Any?>() {
+    override val iterator: Iterator<Any?>
+        get() = data.iterator()
+
+    override val size: Int
+        get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
+
+    override fun alias(name: String): Column<Any> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun toList(): List<Any> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun <T> cast(): Column<T> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+}
+
+class JvmDoubleColumn(override val name: String, private val data: DoubleArray): JvmAbstractColumn<Double>(), DoubleColumn {
+    override val iterator: Iterator<Double>
+        get() = data.iterator()
 
     override val size: Int
         get() = data.size
 
-    override fun <R> map(f: (T) -> R): Column<R> {
-        return JvmColumn(name) { data.map(f) }
+    override fun <R> map(f: (Double) -> R): Column<R> {
+        TODO()
     }
 
-    override fun alias(name: String): Column<T> {
-        return JvmColumn(name) { data }
+    override fun alias(name: String): Column<Double> {
+        return JvmDoubleColumn(name, data)
     }
 
-    override fun toList(): List<T> = data
+    override fun toList(): List<Double> {
+        return data.asList()
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <T> cast(): Column<T> {
+        return this as Column<T>
+    }
 }
 
-class DoubleColumn(name: String, build: () -> List<Double>): JvmColumn<Double>(name, build)
-
-class IntColumn(name: String, build: () -> List<Int>): JvmColumn<Int>(name, build)
-
+//class IntColumn(name: String, build: () -> List<Int>): Column<Int>(name, build)
+//
+//class StringColumn(name: String, build: () -> List<String?>): JvmColumn<String?>(name, build)
 
 fun dataFrameOf(vararg header: String) = DataFrameInplaceBuilder(header.toList())
 
@@ -124,7 +170,7 @@ class DataFrameInplaceBuilder(private val header: List<String>) {
         }
 
         override fun asColumn(): Column<*> {
-            return JvmColumn(name) { data }
+            return DoubleColumn(name) { data }
         }
     }
 
@@ -140,7 +186,7 @@ class DataFrameInplaceBuilder(private val header: List<String>) {
         }
 
         override fun asColumn(): Column<*> {
-            return JvmColumn(name) { data }
+            return IntColumn(name) { data }
         }
     }
 
@@ -152,12 +198,13 @@ class DataFrameInplaceBuilder(private val header: List<String>) {
         }
 
         override fun asColumn(): Column<*> {
-            return JvmColumn(name) { data }
+            return StringColumn(name) { data }
         }
     }
 
     private class ObjectConsumer(val name: String, value: Any?): UntypedConsumer {
         val data = mutableListOf(value)
+
         override fun consume(value: Any?) {
             data.add(value)
         }
