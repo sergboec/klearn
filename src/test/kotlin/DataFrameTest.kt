@@ -30,4 +30,9 @@ class DataFrameTest {
             rowOf(it["y"].cast<Int>() * it["p"].cast<Double>())
         }
     }
+
+    fun assertEquals(expected: List<Int>, actual: List<Int>) {
+        println(">" + actual::class.java)
+        expected.zip(actual).forEach { (x, y) -> println("y=" + y); Assert.assertEquals(x, y) }
+    }
 }

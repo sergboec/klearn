@@ -54,23 +54,37 @@ internal class JvmDataFrame(build: () -> List<Column<*>>): DataFrame {
 abstract class JvmAbstractColumn<out T>: Column<T> {
     abstract val iterator: Iterator<T>
 
+    @Suppress("UNCHECKED_CAST")
     override fun <R> map(f: (T) -> R): Column<R> {
-        return iterator
+        val head = f(iterator.next())
+        when (head) {
+            is Double -> {
+                val store = DoubleArray(size)
+                var index = 0
+                iterator.forEach {
+                    store[index++] = f(it) as? Double ?: Double.NaN
+                }
+                return JvmDoubleColumn(name, store) as Column<R>
+            }
+            is Int -> {
+                val store = IntArray(size)
+                var index = 0
+                iterator.forEach {
+                    store[index ++] = f(it) as? Int ?: Int.MIN_VALUE
+                }
+               return JvmIntColumn(name, store) as Column<R>
+            }
+            else -> {
+                val store = mutableListOf<Any?>()
+                iterator.forEach { store.add(it) }
+                return JvmObjectColumn(name, store) as Column<R>
+            }
+        }
     }
 
-    override fun map(f: (T) -> Double): DoubleColumn {
-        val store = DoubleArray(size)
-        var index = 0
-        iterator.forEach { store[index ++] = f(it) }
-        return JvmDoubleColumn(name, store)
-    }
-
-    override fun map(f: (T) -> Int): IntColumn {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun map(f: (T) -> Long): LongColumn {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    @Suppress("UNCHECKED_CAST")
+    override fun <T> cast(): Column<T> {
+        return this as Column<T>
     }
 }
 
@@ -79,20 +93,13 @@ class JvmObjectColumn(override val name: String, private val data: List<*>): Jvm
         get() = data.iterator()
 
     override val size: Int
-        get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
+        get() = data.size
 
-    override fun alias(name: String): Column<Any> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun alias(name: String): Column<Any?> {
+        return JvmObjectColumn(name, data)
     }
 
-    override fun toList(): List<Any> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun <T> cast(): Column<T> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
+    override fun toList(): List<Any?> = data
 }
 
 class JvmDoubleColumn(override val name: String, private val data: DoubleArray): JvmAbstractColumn<Double>(), DoubleColumn {
@@ -102,10 +109,6 @@ class JvmDoubleColumn(override val name: String, private val data: DoubleArray):
     override val size: Int
         get() = data.size
 
-    override fun <R> map(f: (Double) -> R): Column<R> {
-        TODO()
-    }
-
     override fun alias(name: String): Column<Double> {
         return JvmDoubleColumn(name, data)
     }
@@ -113,13 +116,39 @@ class JvmDoubleColumn(override val name: String, private val data: DoubleArray):
     override fun toList(): List<Double> {
         return data.asList()
     }
+}
 
-    @Suppress("UNCHECKED_CAST")
-    override fun <T> cast(): Column<T> {
-        return this as Column<T>
+class JvmIntColumn(override val name: String, private val data: IntArray): JvmAbstractColumn<Int>(), IntColumn {
+    override val iterator: Iterator<Int>
+        get() = data.iterator()
+
+    override val size: Int
+        get() = data.size
+
+    override fun alias(name: String): Column<Int> {
+        return JvmIntColumn(name, data)
+    }
+
+    override fun toList(): List<Int> {
+        return data.asList()
     }
 }
 
+class JvmStringColumn(override val name: String, private val data: List<String?>): JvmAbstractColumn<String?>() {
+    override val iterator: Iterator<String?>
+        get() = data.iterator()
+
+    override val size: Int
+        get() = data.size
+
+    override fun alias(name: String): Column<String?> {
+        return JvmStringColumn(name, data)
+    }
+
+    override fun toList(): List<String?> {
+        return data
+    }
+}
 //class IntColumn(name: String, build: () -> List<Int>): Column<Int>(name, build)
 //
 //class StringColumn(name: String, build: () -> List<String?>): JvmColumn<String?>(name, build)
@@ -170,7 +199,7 @@ class DataFrameInplaceBuilder(private val header: List<String>) {
         }
 
         override fun asColumn(): Column<*> {
-            return DoubleColumn(name) { data }
+            return JvmDoubleColumn(name, data.toDoubleArray())
         }
     }
 
@@ -186,7 +215,7 @@ class DataFrameInplaceBuilder(private val header: List<String>) {
         }
 
         override fun asColumn(): Column<*> {
-            return IntColumn(name) { data }
+            return JvmIntColumn(name, data.toIntArray())
         }
     }
 
@@ -198,7 +227,7 @@ class DataFrameInplaceBuilder(private val header: List<String>) {
         }
 
         override fun asColumn(): Column<*> {
-            return StringColumn(name) { data }
+            return JvmStringColumn(name, data)
         }
     }
 
@@ -210,7 +239,7 @@ class DataFrameInplaceBuilder(private val header: List<String>) {
         }
 
         override fun asColumn(): Column<*> {
-            return JvmColumn(name) { data }
+            return JvmObjectColumn(name, data)
         }
     }
 }
