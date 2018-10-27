@@ -1,5 +1,7 @@
 package klearn.models
 
+import klearn.DoubleType
+import klearn.IntType
 import klearn.backend.jvm.dataFrameOf
 import klearn.backend.jvm.rowOf
 import org.junit.Assert
@@ -14,8 +16,8 @@ class DataFrameTest {
         )
 
         val yearNow = 2018
-        val df1 = df + df["birthYear"].cast<Int>().map { c: Int -> yearNow - c }.alias("age")
-        Assert.assertEquals(listOf(2018 - 1979, 2018 - 1992), df1["age"].cast<Int>().toList())
+        val df1 = df + df["birthYear", IntType].map(IntType) { c: Int -> yearNow - c }.alias("age")
+        Assert.assertEquals(listOf(2018 - 1979, 2018 - 1992), df1["age", IntType].toList())
     }
 
     @Test
@@ -27,12 +29,7 @@ class DataFrameTest {
         )
 
         df["y", "p"].transform {
-            rowOf(it["y"].cast<Int>() * it["p"].cast<Double>())
+            rowOf(it["y", IntType] * it["p", DoubleType])
         }
-    }
-
-    fun assertEquals(expected: List<Int>, actual: List<Int>) {
-        println(">" + actual::class.java)
-        expected.zip(actual).forEach { (x, y) -> println("y=" + y); Assert.assertEquals(x, y) }
     }
 }

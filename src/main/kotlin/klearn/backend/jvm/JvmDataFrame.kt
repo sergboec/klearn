@@ -1,9 +1,10 @@
 package klearn.backend.jvm
 
 import klearn.*
+import sun.jvm.hotspot.debugger.cdbg.DoubleType
 import java.lang.IllegalArgumentException
 
-internal class JvmDataFrame(build: () -> List<Column<*>>): DataFrame {
+internal class JvmDataFrame(build: () -> List<Column<*>>): DataFrame() {
     val data = build()
 
     override val dim: Dimension = Dimension(data[0].size, data.size)
@@ -55,10 +56,9 @@ abstract class JvmAbstractColumn<out T>: Column<T> {
     abstract val iterator: Iterator<T>
 
     @Suppress("UNCHECKED_CAST")
-    override fun <R> map(f: (T) -> R): Column<R> {
-        val head = f(iterator.next())
-        when (head) {
-            is Double -> {
+    override fun <R> map(type: Type<R>, f: (T) -> R): Column<R> {
+        when (type) {
+            is DoubleType -> {
                 val store = DoubleArray(size)
                 var index = 0
                 iterator.forEach {
@@ -66,7 +66,7 @@ abstract class JvmAbstractColumn<out T>: Column<T> {
                 }
                 return JvmDoubleColumn(name, store) as Column<R>
             }
-            is Int -> {
+            is IntType -> {
                 val store = IntArray(size)
                 var index = 0
                 iterator.forEach {
@@ -74,9 +74,17 @@ abstract class JvmAbstractColumn<out T>: Column<T> {
                 }
                return JvmIntColumn(name, store) as Column<R>
             }
+            is LongType -> {
+                val store = LongArray(size)
+                var index = 0
+                iterator.forEach {
+                    store[index++] = f(it) as? Long ?: Long.MIN_VALUE
+                }
+                return JvmLongColumn(name, store) as Column<R>
+            }
             else -> {
                 val store = mutableListOf<Any?>()
-                iterator.forEach { store.add(it) }
+                iterator.forEach { store.add(f(it)) }
                 return JvmObjectColumn(name, store) as Column<R>
             }
         }
@@ -134,6 +142,22 @@ class JvmIntColumn(override val name: String, private val data: IntArray): JvmAb
     }
 }
 
+class JvmLongColumn(override val name: String, private val data: LongArray): JvmAbstractColumn<Long>(), LongColumn {
+    override val iterator: Iterator<Long>
+        get() = data.iterator()
+
+    override val size: Int
+        get() = data.size
+
+    override fun alias(name: String): Column<Long> {
+        return JvmLongColumn(name, data)
+    }
+
+    override fun toList(): List<Long> {
+        return data.asList()
+    }
+}
+
 class JvmStringColumn(override val name: String, private val data: List<String?>): JvmAbstractColumn<String?>() {
     override val iterator: Iterator<String?>
         get() = data.iterator()
@@ -149,9 +173,6 @@ class JvmStringColumn(override val name: String, private val data: List<String?>
         return data
     }
 }
-//class IntColumn(name: String, build: () -> List<Int>): Column<Int>(name, build)
-//
-//class StringColumn(name: String, build: () -> List<String?>): JvmColumn<String?>(name, build)
 
 fun dataFrameOf(vararg header: String) = DataFrameInplaceBuilder(header.toList())
 

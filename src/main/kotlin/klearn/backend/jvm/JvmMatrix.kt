@@ -8,7 +8,7 @@ import java.lang.IllegalArgumentException
 
 
 internal open class DoubleMatrix(rows: Int, cols: Int, init: (Int) -> Double ): Matrix<Double> {
-    private val a: Array<Double> = Array(rows * cols, init)
+    private val a = DoubleArray(rows * cols, init)
 
     private val size = Dimension(rows, cols)
 
