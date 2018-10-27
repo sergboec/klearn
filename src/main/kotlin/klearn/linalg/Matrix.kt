@@ -2,7 +2,7 @@ package klearn.linalg
 
 import klearn.Dimension
 
-interface Matrix<T: Number> {
+interface Matrix<T> {
     val dim: Dimension
     val t: Matrix<T>
     operator fun plus(other: Matrix<T>): Matrix<T>
@@ -16,10 +16,15 @@ interface Matrix<T: Number> {
     fun almostTheSame(other: Matrix<T>, threshold: T): Boolean
 }
 
-interface Vector<T: Number>: Matrix<T> {
+interface Vector<T>: Matrix<T> {
     operator fun get(index: Int): T
     operator fun set(index: Int, value: T)
     fun dot(other: Vector<T>): T
+}
+
+abstract class MatrixBuilder<T>(val rows: Int, val cols: Int) {
+    abstract fun build(list: List<T>): Matrix<T>
+    operator fun invoke(vararg elements: T): Matrix<T> = build(elements.toList())
 }
 
 fun <T: Number> vectorOf(vararg x: T): Vector<T> {
