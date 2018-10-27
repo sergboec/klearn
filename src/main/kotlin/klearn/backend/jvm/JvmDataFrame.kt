@@ -1,7 +1,6 @@
 package klearn.backend.jvm
 
 import klearn.*
-import sun.jvm.hotspot.debugger.cdbg.DoubleType
 import java.lang.IllegalArgumentException
 
 internal class JvmDataFrame(build: () -> List<Column<*>>): DataFrame() {
