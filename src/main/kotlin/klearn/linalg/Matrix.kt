@@ -27,10 +27,6 @@ abstract class MatrixBuilder<T>(val rows: Int, val cols: Int) {
     operator fun invoke(vararg elements: T): Matrix<T> = build(elements.toList())
 }
 
-fun <T: Number> vectorOf(vararg x: T): Vector<T> {
-    TODO()
-}
-
 fun <T: Number> zeros(n: Int): Vector<T> = TODO()
 
 

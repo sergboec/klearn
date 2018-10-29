@@ -66,5 +66,26 @@ abstract class MatrixTest {
         }
     }
 
+    @Test
+    fun testDot() {
+        val u = vectorOf(0.0, 1.0, 2.0)
+        assertEquals(5.0, u.dot(u), eps)
+    }
+
+    @Test
+    fun testTimes() {
+        val a = matrixOf(2, 3) (
+                0.0, 1.0, 2.0,
+                3.0, 4.0, 5.0
+        )
+        val c = a * a.t
+
+        assertEquals(a.row(0).dot(a.row(0)), c[0, 0], eps)
+        assertEquals(a.row(0).dot(a.row(1)), c[0, 1], eps)
+        assertEquals(a.row(1).dot(a.row(0)), c[1, 0], eps)
+        assertEquals(a.row(1).dot(a.row(1)), c[1, 1], eps)
+    }
+
     abstract fun matrixOf(rows: Int, cols: Int): MatrixBuilder<Double>
+    abstract fun vectorOf(vararg x: Double): Vector<Double>
 }

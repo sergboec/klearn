@@ -9,7 +9,7 @@ import java.lang.IllegalArgumentException
 
 
 internal open class DoubleMatrix(rows: Int, cols: Int): Matrix<Double> {
-    private val a = DoubleArray(rows * cols)
+    internal val a = DoubleArray(rows * cols)
 
     private val size = Dimension(rows, cols)
 
@@ -18,13 +18,6 @@ internal open class DoubleMatrix(rows: Int, cols: Int): Matrix<Double> {
 
     override val t: Matrix<Double>
         get() = transpose()
-
-    inline fun fill(init: (Int) -> Double): DoubleMatrix {
-        for (index in 0 until a.size) {
-            a[index] = init(index)
-        }
-        return this
-    }
 
     override fun get(r: Int, c: Int): Double {
         return a[r * size.cols + c]
@@ -35,41 +28,93 @@ internal open class DoubleMatrix(rows: Int, cols: Int): Matrix<Double> {
     }
 
     override fun plus(other: Matrix<Double>): Matrix<Double> {
-        assert(dim == other.dim)
-        if (other is DoubleMatrix) {
-            return DoubleMatrix(dim.rows, dim.cols).fill { index -> a[index] + other.a[index] }
-        } else throw IllegalArgumentException("Parameter must have type DoubleMatrix")
-    }
-
-    override fun times(other: Matrix<Double>): Matrix<Double> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun times(k: Double): Matrix<Double> {
-        return DoubleMatrix(dim.rows, dim.cols).fill { index -> a[index] * k }
-    }
-
-    override fun minus(other: Matrix<Double>): Matrix<Double> {
-        assert(dim == other.dim)
-        if (other is DoubleMatrix) {
-            return DoubleMatrix(dim.rows, dim.cols).fill { index -> a[index] - other.a[index] }
-        } else throw IllegalArgumentException("Parameter must have type DoubleMatrix")
-    }
-
-    override fun col(index: Int): Vector<Double> {
-        TODO() // copy array
-    }
-
-    override fun row(index: Int): Vector<Double> {
-        var offset = index
-        return DoubleVector(dim.cols, false) {
-            offset += dim.rows
-            a[offset]
+        cast(other) { m ->
+            assert(dim == other.dim)
+            val res = DoubleMatrix(dim.rows, dim.cols)
+            var index = 0
+            while (index < a.size) {
+                res.a[index] = a[index] + m.a[index]
+                index ++
+            }
+            return res
         }
     }
 
+    private inline fun <T> cast(m: Matrix<Double>, body: (DoubleMatrix) -> T): T {
+        if (m is DoubleMatrix) {
+            return body(m)
+        } else throw IllegalArgumentException("Parameter must have type ${this::class.java}")
+    }
+
+    override fun times(other: Matrix<Double>): Matrix<Double> {
+        cast(other) { m ->
+            assert(dim.cols == m.dim.rows)
+            val res = DoubleMatrix(dim.rows, m.dim.cols)
+            for (i in 0 until dim.rows) {
+                for (j in 0 until m.dim.cols) {
+                    var v = 0.0
+                    for (k in 0 until dim.cols) {
+                        v += this[i, k] * m[k, j]
+                    }
+                    res[i, j] = v
+                }
+            }
+            return res
+        }
+    }
+
+    override fun times(k: Double): Matrix<Double> {
+        val res = DoubleMatrix(dim.rows, dim.cols)
+        var index = 0
+        while (index < a.size) {
+            res.a[index] = a[index] * k
+            index ++
+        }
+        return res
+    }
+
+    override fun minus(other: Matrix<Double>): Matrix<Double> {
+        cast(other) { m ->
+            assert(dim == other.dim)
+            val res = DoubleMatrix(dim.rows, dim.cols)
+            var index = 0
+            while (index < a.size) {
+                res.a[index] = a[index] - m.a[index]
+                index ++
+            }
+            return res
+        }
+    }
+
+    override fun col(index: Int): Vector<Double> {
+        val res = DoubleVector(dim.cols, true)
+        var i = 0
+        var offset = index
+        while (index < dim.cols) {
+            res.a[i ++] = a[offset]
+            offset += dim.rows
+        }
+        return res
+    }
+
+    override fun row(index: Int): Vector<Double> {
+        val res = DoubleVector(dim.cols, false)
+        var i = 0
+        var offset = index * dim.cols
+        while (i < dim.cols) {
+            res.a[i ++] = a[offset ++]
+        }
+        return res
+    }
+
     override fun almostTheSame(other: Matrix<Double>, threshold: Double): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        if (dim != other.dim) return false
+        for (i in 0 until dim.rows) {
+            for (j in 0 until dim.cols) {
+                if (Math.abs(this[i, j] - other[i, j]) < threshold) return false
+            }
+        }
+        return true
     }
 
     private fun transpose(): Matrix<Double> {
@@ -83,20 +128,40 @@ internal open class DoubleMatrix(rows: Int, cols: Int): Matrix<Double> {
     }
 }
 
-internal class DoubleVector(n: Int, isColumnVector: Boolean, init: (Int) -> Double): DoubleMatrix(
+internal class DoubleVector(n: Int, isColumnVector: Boolean): DoubleMatrix(
         if (isColumnVector) n else 1,
         if (isColumnVector) 1 else n
 ), Vector<Double> {
     override fun get(index: Int): Double {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return if (dim.cols == 1) this[index, 0] else this[0, index]
     }
 
     override fun set(index: Int, value: Double) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        if (dim.cols == 1) {
+            this[index, 0] = value
+        } else {
+            this[0, index] = value
+        }
     }
 
     override fun dot(other: Vector<Double>): Double {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        cast(other) { v ->
+            assert(dim == other.dim)
+            var res = 0.0
+            var index = 0
+            val size = Math.max(dim.rows, dim.cols)
+            while (index < size) {
+                res += a[index] * v.a[index]
+                index ++
+            }
+            return res
+        }
+    }
+
+    private inline fun <T> cast(m: Vector<Double>, body: (DoubleVector) -> T): T {
+        if (m is DoubleVector) {
+            return body(m)
+        } else throw IllegalArgumentException("Parameter must have type ${this::class.java}")
     }
 }
 
@@ -106,6 +171,8 @@ fun <T> Column<T>.toVector(): Vector<T> {
 
 class DoubleMatrixBuilder(rows: Int, cols: Int): MatrixBuilder<Double>(rows, cols) {
     override fun build(list: List<Double>): Matrix<Double> {
-        return DoubleMatrix(rows, cols).fill { index -> list[index] }
+        val res = DoubleMatrix(rows, cols)
+        list.forEachIndexed { index, value -> res.a[index] = value }
+        return res
     }
 }
