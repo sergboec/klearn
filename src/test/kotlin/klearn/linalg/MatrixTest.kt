@@ -1,5 +1,6 @@
 package klearn.linalg
 
+import klearn.Dimension
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -85,6 +86,59 @@ abstract class MatrixTest {
         assertEquals(a.row(1).dot(a.row(0)), c[1, 0], eps)
         assertEquals(a.row(1).dot(a.row(1)), c[1, 1], eps)
     }
+
+    @Test
+    fun testRow() {
+        val a = matrixOf(2, 3) (
+                0.0, 1.0, 2.0,
+                3.0, 4.0, 5.0
+        )
+        val r = a.row(0)
+        r[0] = 10.0
+
+        assertEquals(10.0, r[0], eps)
+        assertEquals(1.0, r[1], eps)
+        assertEquals(2.0, r[2], eps)
+
+        assertEquals(0.0, a[0, 0], eps)
+
+        val v = a.row(1, copy = false)
+        v[0] = 10.0
+        v[1] = 11.0
+        assertEquals(10.0, a[1, 0], eps)
+        assertEquals(10.0, v[0], eps)
+
+        assertEquals(11.0, a[1, 1], eps)
+        assertEquals(11.0, v[1], eps)
+    }
+
+    @Test
+    fun testCol() {
+        val a = matrixOf(2, 3) (
+                0.0, 1.0, 2.0,
+                3.0, 4.0, 5.0
+        )
+        val r = a.col(0)
+        r[0] = 10.0
+
+        assertEquals(Dimension(2, 1), r.dim)
+
+        assertEquals(10.0, r[0], eps)
+        assertEquals(3.0, r[1], eps)
+
+        assertEquals(0.0, a[0, 0], eps)
+
+        val v = a.col(1, copy = false)
+        v[0] = 10.0
+        v[1] = 11.0
+
+        assertEquals(10.0, a[0, 1], eps)
+        assertEquals(10.0, v[0], eps)
+
+        assertEquals(11.0, a[1, 1], eps)
+        assertEquals(11.0, v[1], eps)
+    }
+
 
     abstract fun matrixOf(rows: Int, cols: Int): MatrixBuilder<Double>
     abstract fun vectorOf(vararg x: Double): Vector<Double>

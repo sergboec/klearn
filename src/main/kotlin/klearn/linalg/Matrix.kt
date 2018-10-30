@@ -11,12 +11,13 @@ interface Matrix<T> {
     operator fun minus(other: Matrix<T>): Matrix<T>
     operator fun get(r: Int, c: Int): T
     operator fun set(r: Int, c: Int, value: T)
-    fun col(index: Int): Vector<T>
-    fun row(index: Int): Vector<T>
+    fun col(index: Int, copy: Boolean = true, preserveOrientation: Boolean = true): Vector<T>
+    fun row(index: Int, copy: Boolean = true, preserveOrientation: Boolean = true): Vector<T>
     fun almostTheSame(other: Matrix<T>, threshold: T): Boolean
 }
 
 interface Vector<T>: Matrix<T> {
+    val size: Int
     operator fun get(index: Int): T
     operator fun set(index: Int, value: T)
     fun dot(other: Vector<T>): T
