@@ -56,9 +56,25 @@ abstract class AbstractDoubleMatrix(rows: Int, cols: Int): Matrix<Double> {
 
     private fun transpose(): Matrix<Double> {
         val res = DoubleMatrix(dim.cols, dim.rows)
-        for (r in 0 until dim.rows) {
-            for (c in 0 until dim.cols) {
+        val m = Math.min(dim.cols, dim.rows)
+        for (r in 0 until m) {
+            for (c in r + 1 until m) {
                 res[c, r] = this[r, c]
+                res[r, c] = this[c, r]
+            }
+            res[r, r] = this[r, r]
+        }
+        if (m == dim.rows) {
+            for (c in m until dim.cols) {
+                for (r in 0 until dim.rows) {
+                    res[c, r] = this[r, c]
+                }
+            }
+        } else {
+            for (r in m until dim.rows) {
+                for (c in 0 until dim.cols) {
+                    res[c, r] = this[r, c]
+                }
             }
         }
         return res
@@ -100,6 +116,18 @@ abstract class AbstractDoubleMatrix(rows: Int, cols: Int): Matrix<Double> {
         } else {
             RowView(this, index)
         }
+    }
+
+    override fun toString(): String {
+        val sb = StringBuilder()
+        for (r in 0 until dim.rows) {
+            for (c in 0 until dim.cols) {
+                sb.append(this[r, c])
+                if (c != dim.cols - 1) sb.append(", ")
+            }
+            sb.appendln()
+        }
+        return sb.toString()
     }
 }
 
@@ -246,7 +274,7 @@ internal class DoubleVector(n: Int, isColumnVector: Boolean): DoubleMatrix (
     }
 
     override fun dot(other: Vector<Double>): Double {
-        assert(dim == other.dim)
+        assert(size == other.size)
         return when (other) {
             is DoubleVector -> {
                 var res = 0.0

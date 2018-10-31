@@ -79,12 +79,18 @@ abstract class MatrixTest {
                 0.0, 1.0, 2.0,
                 3.0, 4.0, 5.0
         )
-        val c = a * a.t
 
-        assertEquals(a.row(0).dot(a.row(0)), c[0, 0], eps)
-        assertEquals(a.row(0).dot(a.row(1)), c[0, 1], eps)
-        assertEquals(a.row(1).dot(a.row(0)), c[1, 0], eps)
-        assertEquals(a.row(1).dot(a.row(1)), c[1, 1], eps)
+        val b = matrixOf(3, 2) (
+                10.0, 13.0,
+                11.0, 14.0,
+                12.0, 15.0
+        )
+        val c = a * b
+
+        assertEquals(a.row(0).dot(b.col(0)), c[0, 0], eps)
+        assertEquals(a.row(0).dot(b.col(1)), c[0, 1], eps)
+        assertEquals(a.row(1).dot(b.col(0)), c[1, 0], eps)
+        assertEquals(a.row(1).dot(b.col(1)), c[1, 1], eps)
     }
 
     @Test
