@@ -1,10 +1,12 @@
 package klearn.backend.jvm
 
 import klearn.*
+import klearn.linalg.Vector
 import java.lang.IllegalArgumentException
 
 internal class JvmDataFrame(build: () -> List<Column<*>>): DataFrame() {
     val data = build()
+    val header = data.map { it.name }
 
     override val dim: Dimension = Dimension(data[0].size, data.size)
 
@@ -47,11 +49,51 @@ internal class JvmDataFrame(build: () -> List<Column<*>>): DataFrame() {
     }
 
     override fun row(index: Int): Row {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return DFRow(index)
+    }
+
+    override fun toString(): String {
+        val sb = StringBuilder()
+        data.forEach { sb.append(it.name + " ") }
+        sb.appendln()
+        for (r in 0 until dim.rows) {
+            data.forEach { sb.append(it.toList()[r].toString() + " ") }
+            sb.appendln()
+        }
+        return sb.toString()
+    }
+
+    inner class DFRow(val rowIndex: Int): Row {
+        override fun getDouble(index: Int): Double {
+            val col = data[index]
+            return if (col is JvmDoubleColumn) col.data[rowIndex] else throw IllegalArgumentException("Column $col is not double column")
+        }
+
+        override fun getInt(index: Int): Int {
+            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        }
+
+        override fun getLong(index: Int): Long {
+            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        }
+
+        override fun getString(index: Int): String {
+            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        }
+
+        override fun getAny(index: Int): Any {
+            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        }
+
+        override fun resolve(name: String): Int {
+            val index = header.withIndex().find { (_, colName) -> colName == name }
+            return index?.index ?: throw IllegalArgumentException("No column $name")
+        }
     }
 }
 
-abstract class JvmAbstractColumn<out T>: Column<T> {
+
+abstract class JvmAbstractColumn<T>: Column<T> {
     abstract val iterator: Iterator<T>
 
     @Suppress("UNCHECKED_CAST")
@@ -93,6 +135,10 @@ abstract class JvmAbstractColumn<out T>: Column<T> {
     override fun <T> cast(): Column<T> {
         return this as Column<T>
     }
+
+    override fun asDataFrame(): DataFrame {
+        return JvmDataFrame { listOf(this) }
+    }
 }
 
 class JvmObjectColumn(override val name: String, private val data: List<*>): JvmAbstractColumn<Any?>() {
@@ -109,7 +155,11 @@ class JvmObjectColumn(override val name: String, private val data: List<*>): Jvm
     override fun toList(): List<Any?> = data
 }
 
-class JvmDoubleColumn(override val name: String, private val data: DoubleArray): JvmAbstractColumn<Double>(), DoubleColumn {
+class JvmDoubleColumn(override val name: String, internal val data: DoubleArray): JvmAbstractColumn<Double>(), DoubleColumn {
+    override fun toVector(): Vector<Double> {
+        return DoubleVector(data.size, isColumnVector = true, data = data)
+    }
+
     override val iterator: Iterator<Double>
         get() = data.iterator()
 

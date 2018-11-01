@@ -19,17 +19,4 @@ class DataFrameTest {
         val df1 = df + df["birthYear", IntType].map(IntType) { c: Int -> yearNow - c }.alias("age")
         Assert.assertEquals(listOf(2018 - 1979, 2018 - 1992), df1["age", IntType].toList())
     }
-
-    @Test
-    fun testSelectAndTransform() {
-        val df = dataFrameOf("x", "y", "p")(
-                10, 1, 0.1,
-                20, 2, 0.2,
-                30, 3, 0.3
-        )
-
-        df["y", "p"].transform {
-            rowOf(it["y", IntType] * it["p", DoubleType])
-        }
-    }
 }

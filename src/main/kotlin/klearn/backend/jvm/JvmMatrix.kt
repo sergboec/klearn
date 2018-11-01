@@ -40,7 +40,7 @@ abstract class AbstractDoubleMatrix(rows: Int, cols: Int): Matrix<Double> {
     }
 
     override fun times(other: Matrix<Double>): Matrix<Double> {
-        assert(dim.cols == other.dim.rows)
+        assert(dim.cols == other.dim.rows) { "$dim ${other.dim}"}
         val res = DoubleMatrix(dim.rows, other.dim.cols)
         for (i in 0 until dim.rows) {
             for (j in 0 until other.dim.cols) {
@@ -92,9 +92,9 @@ abstract class AbstractDoubleMatrix(rows: Int, cols: Int): Matrix<Double> {
 
     override fun col(index: Int, copy: Boolean, preserveOrientation: Boolean): Vector<Double> {
         return if (copy) {
-            val res = DoubleVector(dim.cols, preserveOrientation)
+            val res = DoubleVector(dim.rows, preserveOrientation)
             var i = 0
-            while (index < dim.cols) {
+            while (i < dim.rows) {
                 res.a[i] = this[i, index]
                 i ++
             }
@@ -108,7 +108,7 @@ abstract class AbstractDoubleMatrix(rows: Int, cols: Int): Matrix<Double> {
         return if (copy) {
             val res = DoubleVector(dim.cols, !preserveOrientation)
             var i = 0
-            while (index < dim.rows) {
+            while (i < dim.cols) {
                 res.a[i] = this[index, i]
                 i ++
             }
@@ -129,10 +129,46 @@ abstract class AbstractDoubleMatrix(rows: Int, cols: Int): Matrix<Double> {
         }
         return sb.toString()
     }
+
+    override fun mul(other: Matrix<Double>): Matrix<Double> {
+        assert(dim == other.dim)
+        val res = DoubleMatrix(dim.rows, dim.cols)
+        for (r in 0 until dim.rows) {
+            for (c in 0 until dim.cols) {
+                res[r, c] = this[r, c] * other[r, c]
+            }
+        }
+        return res
+    }
+
+    override fun sum(): Double {
+        var res = 0.0
+        for (r in 0 until dim.rows) {
+            for (c in 0 until dim.cols) {
+                res += this[r, c]
+            }
+        }
+        return res
+    }
+
+    override fun cbind(other: Matrix<Double>): Matrix<Double> {
+        assert(dim.rows == other.dim.rows) { "$dim ${other.dim}" }
+        val res = DoubleMatrix(dim.rows, dim.cols + other.dim.cols)
+        for (r in 0 until dim.rows) {
+            for (c in 0 until dim.cols) {
+                res[r, c] = this[r, c]
+            }
+        }
+        for (r in 0 until dim.rows) {
+            for (c in 0 until other.dim.cols) {
+                res[r, c + dim.cols] = other[r, c]
+            }
+        }
+        return res
+    }
 }
 
-internal open class DoubleMatrix(rows: Int, cols: Int): AbstractDoubleMatrix(rows, cols) {
-    internal val a = DoubleArray(rows * cols)
+internal open class DoubleMatrix(rows: Int, cols: Int, internal val a: DoubleArray = DoubleArray(rows * cols)): AbstractDoubleMatrix(rows, cols) {
 
     override fun get(r: Int, c: Int): Double {
         return a[r * dim.cols + c]
@@ -140,6 +176,10 @@ internal open class DoubleMatrix(rows: Int, cols: Int): AbstractDoubleMatrix(row
 
     override fun set(r: Int, c: Int, value: Double) {
         a[r * dim.cols + c] = value
+    }
+
+    fun cols(vararg c: Int): Matrix<Double> {
+        return DoubleMatrixViewIdx(this, rows = (0 until dim.rows).toList(), cols = c.asList())
     }
 
     override fun plus(other: Matrix<Double>): Matrix<Double> {
@@ -169,7 +209,7 @@ internal open class DoubleMatrix(rows: Int, cols: Int): AbstractDoubleMatrix(row
     }
 
     override fun minus(other: Matrix<Double>): Matrix<Double> {
-        assert(dim == other.dim)
+        assert(dim == other.dim) { "${this.javaClass} $dim ${other.dim} "}
         return when (other) {
             is DoubleMatrix -> {
                 val res = DoubleMatrix(dim.rows, dim.cols)
@@ -222,6 +262,18 @@ open class DoubleMatrixView(val parent: Matrix<Double>, val top: Int, val left: 
     }
 }
 
+open class DoubleMatrixViewIdx(val parent: Matrix<Double>, val rows: List<Int>, val cols: List<Int>) :
+        AbstractDoubleMatrix(rows.size, cols.size) {
+
+    override fun get(r: Int, c: Int): Double {
+        return parent[rows[r], cols[c]]
+    }
+
+    override fun set(r: Int, c: Int, value: Double) {
+        parent[rows[r], cols[c]] = value
+    }
+}
+
 interface AbstractVectorView: Vector<Double> {
     override val size: Int
         get() = Math.max(dim.rows, dim.cols)
@@ -257,9 +309,10 @@ class ColView(parent: Matrix<Double>, col: Int): DoubleMatrixView(parent, 0, col
     }
 }
 
-internal class DoubleVector(n: Int, isColumnVector: Boolean): DoubleMatrix (
+internal class DoubleVector(n: Int, isColumnVector: Boolean, data: DoubleArray = DoubleArray(n)): DoubleMatrix (
         if (isColumnVector) n else 1,
-        if (isColumnVector) 1 else n
+        if (isColumnVector) 1 else n,
+        data
 ), AbstractVectorView {
     override fun get(index: Int): Double {
         return if (dim.cols == 1) this[index, 0] else this[0, index]
@@ -288,10 +341,6 @@ internal class DoubleVector(n: Int, isColumnVector: Boolean): DoubleMatrix (
             else -> super.dot(other)
         }
     }
-}
-
-fun <T> Column<T>.toVector(): Vector<T> {
-    TODO()
 }
 
 class DoubleMatrixBuilder(rows: Int, cols: Int): MatrixBuilder<Double>(rows, cols) {

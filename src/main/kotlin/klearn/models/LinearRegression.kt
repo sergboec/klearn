@@ -3,36 +3,41 @@ package klearn.models
 import klearn.DataFrame
 import klearn.Model
 import klearn.Column
+import klearn.backend.jvm.DoubleVector
+import klearn.linalg.Matrix
 import klearn.linalg.Vector
 import klearn.linalg.zeros
-import klearn.backend.jvm.*
+import klearn.linalg.vectorOf
+import klearn.toVector
 
 
-class LinearRegression(private val maxIter: Int = 50,
+class LinearRegression(private val maxIter: Int = 10000,
                        private val alpha: Double = 0.01,
-                       private val threshold: Double = 1e-4): Model {
+                       private val threshold: Double = 1e-3): Model {
 
     lateinit var theta: Vector<Double>
 
     override fun fit(df: DataFrame, col: Column<*>) {
-        val y = col.cast<Double>().toVector()
-        val (m, n) = df.dim
-        theta = zeros(n + 1)
-        val theta1 = theta
-        theta[n] = 1.0
-        val m1 = 1.0 / m
-        var iter = 0
-        while (iter++ < maxIter && theta.almostTheSame(theta1, threshold)) {
-            theta = theta1
+        TODO("not implemented")
+    }
+
+    fun fit(_x: Matrix<Double>, y: Vector<Double>) {
+        val x = ones(y.size).cbind(_x)
+        val (m, n) = x.dim
+        theta = zeros(n)
+        for (k in 0..maxIter) {
+            val m1 = 1.0 / m
             for (j in 0 until n) {
-                var s = 0.0
-                for (i in 0 until m) {
-                    val xi = df.row(i).toVector<Double>()
-                    s += (theta.dot(xi) - y[i]) * xi[j]
-                }
-                theta1[j] = theta[j] - alpha * m1 * s
+                val xj = x.col(j)
+                val s = xj.mul(x * theta - y).sum()
+                theta[j] -= s * alpha * m1
             }
         }
+    }
+
+    fun ones(n: Int): Vector<Double> {
+        val arr = DoubleArray(n) { 1.0 }
+        return DoubleVector(n, true, arr)
     }
 
     fun DataFrame.normalize(): DataFrame {

@@ -29,12 +29,22 @@ abstract class DataFrame {
 data class Dimension(val rows: Int, val cols: Int)
 
 interface Row {
-    operator fun <T> get(name: String, type: Type<T>): T
-    operator fun <T> get(index: Int, type: Type<T>): T
-    fun <T: Number> toVector(): Vector<T>
+    fun getDouble(name: String): Double = getDouble(resolve(name))
+    fun getInt(name: String): Int = getInt(resolve(name))
+    fun getLong(name: String): Long = getLong(resolve(name))
+    fun getString(name: String): String = getString(resolve(name))
+    fun getAny(name: String): Any = getAny(resolve(name))
+
+    fun getDouble(index: Int): Double
+    fun getInt(index: Int): Int
+    fun getLong(index: Int): Long
+    fun getString(index: Int): String
+    fun getAny(index: Int): Any
+
+    fun resolve(name: String): Int
 }
 
-interface Column<out T> {
+interface Column<T> {
     val size: Int
     val name: String
 
@@ -42,6 +52,11 @@ interface Column<out T> {
     fun alias(name: String): Column<T>
     fun toList(): List<T>
     fun <T> cast(): Column<T>
+    fun asDataFrame(): DataFrame
+}
+
+fun Column<Double>.toVector(): Vector<Double> {
+    return (this as DoubleColumn).toVector()
 }
 
 @Suppress("UNUSED")
@@ -52,7 +67,10 @@ object DoubleType: Type<Double>()
 object StringType : Type<String>()
 object ObjectType : Type<Any>()
 
-interface DoubleColumn: Column<Double>
+interface DoubleColumn: Column<Double> {
+    fun toVector(): Vector<Double>
+}
+
 interface IntColumn: Column<Int>
 interface LongColumn: Column<Long>
 

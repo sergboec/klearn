@@ -1,5 +1,6 @@
 package klearn.linalg
 
+import klearn.Context
 import klearn.Dimension
 
 interface Matrix<T> {
@@ -14,6 +15,10 @@ interface Matrix<T> {
     fun col(index: Int, copy: Boolean = true, preserveOrientation: Boolean = true): Vector<T>
     fun row(index: Int, copy: Boolean = true, preserveOrientation: Boolean = true): Vector<T>
     fun almostTheSame(other: Matrix<T>, threshold: T): Boolean
+    fun mul(other: Matrix<T>): Matrix<T>
+    fun sum(): T
+//    fun rbind(other: Matrix<T>)
+    fun cbind(other: Matrix<T>): Matrix<T>
 }
 
 interface Vector<T>: Matrix<T> {
@@ -28,8 +33,8 @@ abstract class MatrixBuilder<T>(val rows: Int, val cols: Int) {
     operator fun invoke(vararg elements: T): Matrix<T> = build(elements.toList())
 }
 
-fun <T: Number> zeros(n: Int): Vector<T> = TODO()
-
+fun zeros(n: Int): Vector<Double> = Context.getContext().zeros(n)
+fun vectorOf(list: List<Double>): Vector<Double> = Context.getContext().vectorOf(list)
 
 operator fun <T: Number> Double.times(matrix: Matrix<T>): Matrix<T> = matrix.times(this)
 
