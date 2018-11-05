@@ -1,4 +1,4 @@
-package klearn.backend.jvm
+package klearn.jvm
 
 import klearn.Dimension
 import klearn.Column
@@ -309,7 +309,7 @@ class ColView(parent: Matrix<Double>, col: Int): DoubleMatrixView(parent, 0, col
     }
 }
 
-internal class DoubleVector(n: Int, isColumnVector: Boolean, data: DoubleArray = DoubleArray(n)): DoubleMatrix (
+internal class DoubleVector(n: Int, isColumnVector: Boolean, data: DoubleArray = DoubleArray(n)): DoubleMatrix(
         if (isColumnVector) n else 1,
         if (isColumnVector) 1 else n,
         data

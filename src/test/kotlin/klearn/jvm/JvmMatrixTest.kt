@@ -1,7 +1,7 @@
 package klearn.models.klearn.backend.jvm
 
-import klearn.backend.jvm.DoubleMatrixBuilder
-import klearn.backend.jvm.DoubleVector
+import klearn.jvm.DoubleMatrixBuilder
+import klearn.jvm.DoubleVector
 import klearn.linalg.MatrixBuilder
 import klearn.linalg.MatrixTest
 import klearn.linalg.Vector

@@ -3,7 +3,7 @@ package klearn.models
 import klearn.DataFrame
 import klearn.Model
 import klearn.Column
-import klearn.backend.jvm.DoubleVector
+import klearn.jvm.DoubleVector
 import klearn.linalg.Matrix
 import klearn.linalg.Vector
 import klearn.linalg.zeros

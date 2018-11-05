@@ -1,6 +1,6 @@
 package klearn
 
-import klearn.backend.jvm.JvmContext
+import klearn.jvm.KContext
 import klearn.linalg.Vector
 
 /**
@@ -10,10 +10,11 @@ import klearn.linalg.Vector
 interface Context {
     fun zeros(n: Int): Vector<Double>
     fun vectorOf(list: List<Double>): Vector<Double>
+    fun dataFrameOf(vararg header: String): DataFrameInPlaceBuilder
 
     companion object {
         fun getContext(): Context {
-            return JvmContext
+            return KContext
         }
     }
 }

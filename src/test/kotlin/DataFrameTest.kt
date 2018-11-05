@@ -1,13 +1,12 @@
 package klearn.models
 
-import klearn.DoubleType
+import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertNull
+import klearn.DataFrameInPlaceBuilder
 import klearn.IntType
-import klearn.backend.jvm.dataFrameOf
-import klearn.backend.jvm.rowOf
-import org.junit.Assert
 import org.junit.Test
 
-class DataFrameTest {
+abstract class DataFrameTest {
     @Test
     fun testDataFrameOf() {
         val df = dataFrameOf("name", "birthYear")(
@@ -16,7 +15,49 @@ class DataFrameTest {
         )
 
         val yearNow = 2018
-        val df1 = df + df["birthYear", IntType].map(IntType) { c: Int -> yearNow - c }.alias("age")
-        Assert.assertEquals(listOf(2018 - 1979, 2018 - 1992), df1["age", IntType].toList())
+        val df1 = df.cbind(df["birthYear", IntType].map(IntType) { c: Int -> yearNow - c }.alias("age"))
+        assertEquals(listOf(2018 - 1979, 2018 - 1992), df1["age", IntType].iterator().toList())
     }
+
+
+    @Test
+    fun testFilter() {
+        val df = dataFrameOf("year", "name") (
+                1979, "Vitaly",
+                1980, "Nikita",
+                1996, "Petya",
+                1979, "Sasha"
+        )
+        val res = df.filter("year") { year: Int -> year >= 1980 }
+        assertEquals(2, res.dim.rows)
+        assertEquals(listOf(1980, 1996), res["year"].iterator().toList())
+        assertEquals(listOf("Nikita", "Petya"), res["name"].iterator().toList())
+    }
+
+    @Test
+    fun testNull() {
+        val df = dataFrameOf("c1", "c2", "c3") (
+                10, 1.0, 0L,
+                null, 2.0, 1L,
+                11, null, null
+        )
+
+        // row-wise check
+        assertNull(df.row(1).getInt(0))
+        assertNull(df.row(2).getDouble(1))
+        assertNull(df.row(2).getLong(2))
+
+        // column-wise check
+        // assertNull(df[0].cast<Int>()[1])
+    }
+
+    private fun <T> Iterator<T>.toList(): List<T> {
+        val res = mutableListOf<T>()
+        while (hasNext()) {
+            res.add(next())
+        }
+        return res
+    }
+
+    abstract fun dataFrameOf(vararg header: String): DataFrameInPlaceBuilder
 }
