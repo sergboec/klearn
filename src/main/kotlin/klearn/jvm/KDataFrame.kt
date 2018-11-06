@@ -2,7 +2,6 @@ package klearn.jvm
 
 import klearn.*
 import klearn.linalg.Vector
-import java.lang.IllegalArgumentException
 
 internal class KDataFrame(build: () -> List<KAbstractColumn<*>>): DataFrame() {
     val data = build()
@@ -93,7 +92,7 @@ internal class KDataFrame(build: () -> List<KAbstractColumn<*>>): DataFrame() {
         return KDataFrame { data.map { ColumnView(it, indexes) } }
     }
 
-    inner class KRow(val rowIndex: Int): Row {
+    inner class KRow(private val rowIndex: Int): Row {
         override fun getDouble(index: Int): Double? {
             val col = data[index].cast<Double>()
             return col[rowIndex].unpack(NA.double)
@@ -210,8 +209,8 @@ abstract class KAbstractColumn<T>: Column<T> {
 }
 
 class KObjectColumn(override val name: String, private val data: List<*>): KAbstractColumn<Any?>() {
-    override fun get(i: Int): Any? {
-        return data[i]
+    override fun get(index: Int): Any? {
+        return data[index]
     }
 
     override val type: Type<Any?>
