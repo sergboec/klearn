@@ -62,6 +62,12 @@ abstract class DataFrameTest {
         assertNull(df[0].cast<Int?>()[1])
     }
 
+    @Test
+    fun testTypeNullability() {
+        assertTrue(NullableLongType.isNullable())
+        assertFalse(LongType.isNullable())
+    }
+
     private fun <T> Iterator<T>.toList(): List<T> {
         val res = mutableListOf<T>()
         while (hasNext()) {

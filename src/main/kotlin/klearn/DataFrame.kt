@@ -67,35 +67,36 @@ fun Column<Double>.toVector(): Vector<Double> {
 
 @Suppress("UNUSED")
 sealed class Type<out T> {
-    open fun nullable(): Type<T?> = this
+    open fun mkNullable(): Type<T?> = this
+    fun isNullable(): Boolean = mkNullable() == this
 }
 
 object IntType : Type<Int>() {
-    override fun nullable(): Type<Int?> {
+    override fun mkNullable(): Type<Int?> {
         return NullableIntType
     }
 }
 
 object LongType : Type<Long>() {
-    override fun nullable(): Type<Long?> {
+    override fun mkNullable(): Type<Long?> {
         return NullableLongType
     }
 }
 
 object DoubleType: Type<Double>() {
-    override fun nullable(): Type<Double?> {
+    override fun mkNullable(): Type<Double?> {
         return NullableDoubleType
     }
 }
 
 object StringType : Type<String>() {
-    override fun nullable(): Type<String?> {
+    override fun mkNullable(): Type<String?> {
         return NullableStringType
     }
 }
 
 object ObjectType : Type<Any>() {
-    override fun nullable(): Type<Any?> {
+    override fun mkNullable(): Type<Any?> {
         return NullableObjectType
     }
 }

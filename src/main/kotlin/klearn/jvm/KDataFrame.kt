@@ -164,37 +164,37 @@ class ColumnView<T>(val column: KAbstractColumn<T>, val indexes: List<Int>): KAb
 abstract class KAbstractColumn<T>: Column<T> {
     @Suppress("UNCHECKED_CAST")
     override fun <R> map(type: Type<R>, f: (T) -> R): Column<R> {
-        when (type) {
-            is DoubleType -> {
+        return when (type) {
+            is DoubleType, NullableDoubleType -> {
                 val store = DoubleArray(size)
                 var index = 0
                 iterator().forEach {
-                    store[index++] = f(it) as? Double ?: NA.double
+                    store[index ++] = f(it) as? Double ?: NA.double
                 }
-                return KDoubleColumn(name, store) as Column<R>
+                if (type.isNullable()) KNullableDoubleColumn(name, store) else KDoubleColumn(name, store)
             }
-            is IntType -> {
+            is IntType, NullableDoubleType -> {
                 val store = IntArray(size)
                 var index = 0
                 iterator().forEach {
                     store[index ++] = f(it) as? Int ?: NA.int
                 }
-               return KIntColumn(name, store) as Column<R>
+               if (type.isNullable()) KNullableIntColumn(name, store) else KIntColumn(name, store)
             }
-            is LongType -> {
+            is LongType, NullableLongType -> {
                 val store = LongArray(size)
                 var index = 0
                 iterator().forEach {
-                    store[index++] = f(it) as? Long ?: NA.long
+                    store[index ++] = f(it) as? Long ?: NA.long
                 }
-                return KLongColumn(name, store) as Column<R>
+                if (type.isNullable()) KNullableLongColumn(name, store) else KLongColumn(name, store)
             }
             else -> {
                 val store = mutableListOf<Any?>()
                 iterator().forEach { store.add(f(it)) }
-                return KObjectColumn(name, store) as Column<R>
+                KObjectColumn(name, store) as Column<R>
             }
-        }
+        } as Column<R>
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -438,7 +438,7 @@ class KDataFrameInPlaceBuilder(private val header: List<String>): DataFrameInPla
                 type = if (t > type) t else type
             }
         }
-        return if (nullable) type.type.nullable() else type.type
+        return if (nullable) type.type.mkNullable() else type.type
     }
 
     private enum class ColumnTypes(val type: Type<*>): Comparable<ColumnTypes> {
