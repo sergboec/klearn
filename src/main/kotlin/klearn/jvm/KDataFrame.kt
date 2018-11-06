@@ -249,7 +249,25 @@ class KDoubleColumn(override val name: String, private val data: DoubleArray): K
     override fun iterator(): Iterator<Double> = data.iterator()
 }
 
-class KIntColumn(override val name: String, private val data: IntArray): KAbstractColumn<Int>(), IntColumn {
+class KNullableDoubleColumn(override val name: String, private val data: DoubleArray): KAbstractColumn<Double?>() {
+    override fun get(index: Int): Double {
+        return data[index]
+    }
+
+    override val type: Type<Double?>
+        get() = NullableDoubleType
+
+    override val size: Int
+        get() = data.size
+
+    override fun alias(name: String): KAbstractColumn<Double?> {
+        return KNullableDoubleColumn(name, data)
+    }
+
+    override fun iterator(): Iterator<Double?> = IteratorWithUnpacking(data.iterator(), Double.NaN)
+}
+
+class KIntColumn(override val name: String, private val data: IntArray): KAbstractColumn<Int>() {
     override fun get(index: Int): Int {
         return data[index]
     }
@@ -269,7 +287,27 @@ class KIntColumn(override val name: String, private val data: IntArray): KAbstra
     }
 }
 
-class KLongColumn(override val name: String, private val data: LongArray): KAbstractColumn<Long>(), LongColumn {
+class KNullableIntColumn(override val name: String, private val data: IntArray): KAbstractColumn<Int?>() {
+    override fun alias(name: String): KAbstractColumn<Int?> {
+        return KNullableIntColumn(name, data)
+    }
+
+    override val size: Int
+        get() = data.size
+
+    override val type: Type<Int?>
+        get() = NullableIntType
+
+    override fun get(index: Int): Int? {
+        return data[index].unpack(Int.MIN_VALUE)
+    }
+
+    override fun iterator(): Iterator<Int?> {
+        return IteratorWithUnpacking(data.iterator(), Int.MIN_VALUE)
+    }
+}
+
+class KLongColumn(override val name: String, private val data: LongArray): KAbstractColumn<Long>() {
     override fun get(index: Int): Long {
        return data[index]
     }
@@ -289,7 +327,47 @@ class KLongColumn(override val name: String, private val data: LongArray): KAbst
     }
 }
 
-class KStringColumn(override val name: String, private val data: List<String?>): KAbstractColumn<String?>() {
+class KNullableLongColumn(override val name: String, private val data: LongArray): KAbstractColumn<Long?>() {
+    override fun alias(name: String): KAbstractColumn<Long?> {
+        return KNullableLongColumn(name, data)
+    }
+
+    override val size: Int
+        get() = data.size
+
+    override val type: Type<Long?>
+        get() = NullableLongType
+
+    override fun get(index: Int): Long? {
+        return data[index].unpack(Long.MIN_VALUE)
+    }
+
+    override fun iterator(): Iterator<Long?> {
+        return IteratorWithUnpacking(data.iterator(), Long.MIN_VALUE)
+    }
+}
+
+class KStringColumn(override val name: String, private val data: List<String>): KAbstractColumn<String>() {
+    override fun get(index: Int): String {
+        return data[index]
+    }
+
+    override fun iterator(): Iterator<String> {
+        return data.iterator()
+    }
+
+    override val type: Type<String>
+        get() = StringType
+
+    override val size: Int
+        get() = data.size
+
+    override fun alias(name: String): KAbstractColumn<String> {
+        return KStringColumn(name, data)
+    }
+}
+
+class KNullableStringColumn(override val name: String, private val data: List<String?>): KAbstractColumn<String?>() {
     override fun get(index: Int): String? {
         return data[index]
     }
@@ -299,108 +377,97 @@ class KStringColumn(override val name: String, private val data: List<String?>):
     }
 
     override val type: Type<String?>
-        get() = StringType
+        get() = NullableStringType
 
     override val size: Int
         get() = data.size
 
     override fun alias(name: String): KAbstractColumn<String?> {
-        return KStringColumn(name, data)
+        return KNullableStringColumn(name, data)
     }
 }
 
 class KDataFrameInPlaceBuilder(private val header: List<String>): DataFrameInPlaceBuilder(header) {
-    interface UntypedConsumer {
-        fun consume(value: Any?)
-        fun asColumn(): KAbstractColumn<*>
+    override fun build(data: List<Any?>): DataFrame {
+        val cwData = columnWise(data)
+        val cols = cwData.zip(header).map { (rawCol, name) ->
+            val type = inferType(rawCol)
+            when (type) {
+                is IntType -> KIntColumn(name, rawCol.map { (it as Number).toInt() }.toIntArray())
+                is NullableIntType -> KNullableIntColumn(name, rawCol.map { (it as Int?)?.toInt().pack(Int.MIN_VALUE) }.toIntArray())
+                is LongType -> KLongColumn(name, rawCol.map { (it as Number).toLong() }.toLongArray())
+                is NullableLongType -> KNullableLongColumn(name, rawCol.map { (it as Number?)?.toLong().pack(Long.MIN_VALUE) }.toLongArray())
+                is DoubleType -> KDoubleColumn(name, rawCol.map { (it as Number).toDouble() }.toDoubleArray())
+                is NullableDoubleType -> KNullableDoubleColumn(name, rawCol.map { (it as Number?)?.toDouble().pack(Double.NaN) }.toDoubleArray())
+                is StringType -> KStringColumn(name, rawCol.map { it as String } )
+                is NullableStringType -> KNullableStringColumn(name, rawCol.map { it as String? } )
+                else -> throw IllegalArgumentException(type.toString())
+            }
+        }
+        return KDataFrame { cols }
     }
 
-    override fun build(data: List<Any?>): DataFrame {
+    private fun columnWise(data: List<*>): List<List<*>> {
+        val res = mutableListOf<MutableList<Any?>>()
+        header.forEach { res.add(mutableListOf()) }
         var list = data
-        val firstRow = list.take(header.size)
-        list = list.drop(header.size)
-        val consumers = inferSchema(firstRow)
         while (list.isNotEmpty()) {
             val row = list.take(header.size)
             list = list.drop(header.size)
-            row.zip(consumers).forEach { (value, consumer) -> consumer.consume(value) }
-        }
-        return KDataFrame { consumers.map { it.asColumn() } }
-    }
-
-    private fun inferSchema(row: List<*>): List<UntypedConsumer> {
-        return row.zip(header).map { (value, col) ->
-            when (value) {
-                is Double -> DoubleConsumer(col, value)
-                is Int -> IntConsumer(col, value)
-                is String -> StringConsumer(col, value)
-                else -> ObjectConsumer(col, value)
+            row.zip(res).forEach { (value, column) ->
+                column.add(value)
             }
         }
+        return res
     }
 
-    private class DoubleConsumer(val name: String, value: Double?): UntypedConsumer {
-        val data = mutableListOf<Double>()
-
-        init {
-            consume(value)
+    private fun inferType(column: List<Any?>): Type<*> {
+        var nullable = false
+        var type = 0
+        for (d in column) {
+            if (d == null) {
+                nullable = true
+            } else {
+                val t = when (d) {
+                    is Double -> 3
+                    is Int -> 1
+                    is Long -> 2
+                    is String -> 4
+                    else -> 5
+                }
+                type = Math.max(type, t)
+            }
         }
-
-        override fun consume(value: Any?) {
-            data.add(value as? Double ?: Double.NaN)
-        }
-
-        override fun asColumn(): KAbstractColumn<*> {
-            return KDoubleColumn(name, data.toDoubleArray())
-        }
+        return if (nullable) getType(type).nullable() else getType(type)
     }
 
-    private class IntConsumer(val name: String, value: Int?): UntypedConsumer {
-        val data = mutableListOf<Int>()
-
-        init {
-            consume(value)
-        }
-
-        override fun consume(value: Any?) {
-            data.add(value as? Int ?: Int.MIN_VALUE)
-        }
-
-        override fun asColumn(): KAbstractColumn<*> {
-            return KIntColumn(name, data.toIntArray())
-        }
-    }
-
-    private class StringConsumer(val name: String, value: String?): UntypedConsumer {
-        val data = mutableListOf(value)
-
-        override fun consume(value: Any?) {
-            data.add(value as? String)
-        }
-
-        override fun asColumn(): KAbstractColumn<*> {
-            return KStringColumn(name, data)
+    private fun getType(type: Int): Type<*> {
+        return when (type) {
+            1 -> IntType
+            2 -> LongType
+            3 -> DoubleType
+            4 -> StringType
+            5 -> ObjectType
+            else -> throw IllegalArgumentException()
         }
     }
 
-    private class ObjectConsumer(val name: String, value: Any?): UntypedConsumer {
-        val data = mutableListOf(value)
-
-        override fun consume(value: Any?) {
-            data.add(value)
-        }
-
-        override fun asColumn(): KAbstractColumn<*> {
-            return KObjectColumn(name, data)
-        }
-    }
 }
 
 fun <T> T.unpack(na: T): T? {
     return if (this == na) null else this
 }
 
-fun <T> T.pack(na: T): T {
+fun <T> T?.pack(na: T): T {
     return this ?: na
 }
 
+class IteratorWithUnpacking<T>(val iterator: Iterator<T>, private val na: T): Iterator<T?> {
+    override fun hasNext(): Boolean {
+        return iterator.hasNext()
+    }
+
+    override fun next(): T? {
+        return iterator.next().unpack(na)
+    }
+}

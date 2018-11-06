@@ -66,19 +66,50 @@ fun Column<Double>.toVector(): Vector<Double> {
 }
 
 @Suppress("UNUSED")
-sealed class Type<T>
-object IntType : Type<Int>()
-object LongType : Type<Long>()
-object DoubleType: Type<Double>()
-object StringType : Type<String?>()
-object ObjectType : Type<Any?>()
+sealed class Type<out T> {
+    open fun nullable(): Type<T?> = this
+}
+
+object IntType : Type<Int>() {
+    override fun nullable(): Type<Int?> {
+        return NullableIntType
+    }
+}
+
+object LongType : Type<Long>() {
+    override fun nullable(): Type<Long?> {
+        return NullableLongType
+    }
+}
+
+object DoubleType: Type<Double>() {
+    override fun nullable(): Type<Double?> {
+        return NullableDoubleType
+    }
+}
+
+object StringType : Type<String>() {
+    override fun nullable(): Type<String?> {
+        return NullableStringType
+    }
+}
+
+object ObjectType : Type<Any>() {
+    override fun nullable(): Type<Any?> {
+        return NullableObjectType
+    }
+}
+
+object NullableIntType: Type<Int?>()
+object NullableLongType: Type<Long?>()
+object NullableDoubleType: Type<Double?>()
+object NullableStringType: Type<String?>()
+object NullableObjectType: Type<Any?>()
+
 
 interface DoubleColumn: Column<Double> {
     fun toVector(): Vector<Double>
 }
-
-interface IntColumn: Column<Int>
-interface LongColumn: Column<Long>
 
 fun DataFrame.split(fraction: Double): Pair<DataFrame, DataFrame> = TODO()
 

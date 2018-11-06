@@ -1,14 +1,26 @@
 package klearn.models
 
-import junit.framework.TestCase.assertEquals
-import junit.framework.TestCase.assertNull
-import klearn.DataFrameInPlaceBuilder
-import klearn.IntType
+import junit.framework.TestCase.*
+import klearn.*
 import org.junit.Test
 
 abstract class DataFrameTest {
     @Test
     fun testDataFrameOf() {
+        val df = dataFrameOf("c1", "c2", "c3", "c4", "c5")(
+                0, 1, 2, 3, "hello",
+                1, null, null, 3.0, "world",
+                2, 0, 0L, null, "test"
+        )
+        assertEquals(IntType, df["c1"].type)
+        assertEquals(NullableIntType, df["c2"].type)
+        assertEquals(NullableLongType, df["c3"].type)
+        assertEquals(NullableDoubleType, df["c4"].type)
+        assertEquals(StringType, df["c5"].type)
+    }
+
+    @Test
+    fun testCBind() {
         val df = dataFrameOf("name", "birthYear")(
                 "john", 1979,
                 "jane", 1992
@@ -18,7 +30,6 @@ abstract class DataFrameTest {
         val df1 = df.cbind(df["birthYear", IntType].map(IntType) { c: Int -> yearNow - c }.alias("age"))
         assertEquals(listOf(2018 - 1979, 2018 - 1992), df1["age", IntType].iterator().toList())
     }
-
 
     @Test
     fun testFilter() {
@@ -48,7 +59,7 @@ abstract class DataFrameTest {
         assertNull(df.row(2).getLong(2))
 
         // column-wise check
-        // assertNull(df[0].cast<Int>()[1])
+        assertNull(df[0].cast<Int?>()[1])
     }
 
     private fun <T> Iterator<T>.toList(): List<T> {
