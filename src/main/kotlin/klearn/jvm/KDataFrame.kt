@@ -96,17 +96,17 @@ internal class KDataFrame(build: () -> List<KAbstractColumn<*>>): DataFrame() {
     inner class KRow(val rowIndex: Int): Row {
         override fun getDouble(index: Int): Double? {
             val col = data[index].cast<Double>()
-            return col[rowIndex].unpack(Double.NaN)
+            return col[rowIndex].unpack(NA.double)
         }
 
         override fun getInt(index: Int): Int? {
             val col = data[index].cast<Int>()
-            return col[rowIndex].unpack(Int.MIN_VALUE)
+            return col[rowIndex].unpack(NA.int)
         }
 
         override fun getLong(index: Int): Long? {
             val col = data[index].cast<Long>()
-            return col[rowIndex].unpack(Long.MIN_VALUE)
+            return col[rowIndex].unpack(NA.long)
         }
 
         override fun getString(index: Int): String? {
@@ -169,7 +169,7 @@ abstract class KAbstractColumn<T>: Column<T> {
                 val store = DoubleArray(size)
                 var index = 0
                 iterator().forEach {
-                    store[index++] = f(it) as? Double ?: Double.NaN
+                    store[index++] = f(it) as? Double ?: NA.double
                 }
                 return KDoubleColumn(name, store) as Column<R>
             }
@@ -177,7 +177,7 @@ abstract class KAbstractColumn<T>: Column<T> {
                 val store = IntArray(size)
                 var index = 0
                 iterator().forEach {
-                    store[index ++] = f(it) as? Int ?: Int.MIN_VALUE
+                    store[index ++] = f(it) as? Int ?: NA.int
                 }
                return KIntColumn(name, store) as Column<R>
             }
@@ -185,7 +185,7 @@ abstract class KAbstractColumn<T>: Column<T> {
                 val store = LongArray(size)
                 var index = 0
                 iterator().forEach {
-                    store[index++] = f(it) as? Long ?: Long.MIN_VALUE
+                    store[index++] = f(it) as? Long ?: NA.long
                 }
                 return KLongColumn(name, store) as Column<R>
             }
@@ -250,8 +250,8 @@ class KDoubleColumn(override val name: String, private val data: DoubleArray): K
 }
 
 class KNullableDoubleColumn(override val name: String, private val data: DoubleArray): KAbstractColumn<Double?>() {
-    override fun get(index: Int): Double {
-        return data[index]
+    override fun get(index: Int): Double? {
+        return data[index].unpack(NA.double)
     }
 
     override val type: Type<Double?>
@@ -264,7 +264,7 @@ class KNullableDoubleColumn(override val name: String, private val data: DoubleA
         return KNullableDoubleColumn(name, data)
     }
 
-    override fun iterator(): Iterator<Double?> = IteratorWithUnpacking(data.iterator(), Double.NaN)
+    override fun iterator(): Iterator<Double?> = IteratorWithUnpacking(data.iterator(), NA.double)
 }
 
 class KIntColumn(override val name: String, private val data: IntArray): KAbstractColumn<Int>() {
@@ -299,11 +299,11 @@ class KNullableIntColumn(override val name: String, private val data: IntArray):
         get() = NullableIntType
 
     override fun get(index: Int): Int? {
-        return data[index].unpack(Int.MIN_VALUE)
+        return data[index].unpack(NA.int)
     }
 
     override fun iterator(): Iterator<Int?> {
-        return IteratorWithUnpacking(data.iterator(), Int.MIN_VALUE)
+        return IteratorWithUnpacking(data.iterator(), NA.int)
     }
 }
 
@@ -339,11 +339,11 @@ class KNullableLongColumn(override val name: String, private val data: LongArray
         get() = NullableLongType
 
     override fun get(index: Int): Long? {
-        return data[index].unpack(Long.MIN_VALUE)
+        return data[index].unpack(NA.long)
     }
 
     override fun iterator(): Iterator<Long?> {
-        return IteratorWithUnpacking(data.iterator(), Long.MIN_VALUE)
+        return IteratorWithUnpacking(data.iterator(), NA.long)
     }
 }
 
@@ -394,11 +394,11 @@ class KDataFrameInPlaceBuilder(private val header: List<String>): DataFrameInPla
             val type = inferType(rawCol)
             when (type) {
                 is IntType -> KIntColumn(name, rawCol.map { (it as Number).toInt() }.toIntArray())
-                is NullableIntType -> KNullableIntColumn(name, rawCol.map { (it as Int?)?.toInt().pack(Int.MIN_VALUE) }.toIntArray())
+                is NullableIntType -> KNullableIntColumn(name, rawCol.map { (it as Int?)?.toInt().pack(NA.int) }.toIntArray())
                 is LongType -> KLongColumn(name, rawCol.map { (it as Number).toLong() }.toLongArray())
-                is NullableLongType -> KNullableLongColumn(name, rawCol.map { (it as Number?)?.toLong().pack(Long.MIN_VALUE) }.toLongArray())
+                is NullableLongType -> KNullableLongColumn(name, rawCol.map { (it as Number?)?.toLong().pack(NA.long) }.toLongArray())
                 is DoubleType -> KDoubleColumn(name, rawCol.map { (it as Number).toDouble() }.toDoubleArray())
-                is NullableDoubleType -> KNullableDoubleColumn(name, rawCol.map { (it as Number?)?.toDouble().pack(Double.NaN) }.toDoubleArray())
+                is NullableDoubleType -> KNullableDoubleColumn(name, rawCol.map { (it as Number?)?.toDouble().pack(NA.double) }.toDoubleArray())
                 is StringType -> KStringColumn(name, rawCol.map { it as String } )
                 is NullableStringType -> KNullableStringColumn(name, rawCol.map { it as String? } )
                 else -> throw IllegalArgumentException(type.toString())
@@ -423,35 +423,37 @@ class KDataFrameInPlaceBuilder(private val header: List<String>): DataFrameInPla
 
     private fun inferType(column: List<Any?>): Type<*> {
         var nullable = false
-        var type = 0
+        var type = ColumnTypes.INT
         for (d in column) {
             if (d == null) {
                 nullable = true
             } else {
                 val t = when (d) {
-                    is Double -> 3
-                    is Int -> 1
-                    is Long -> 2
-                    is String -> 4
-                    else -> 5
+                    is Int -> ColumnTypes.INT
+                    is Long -> ColumnTypes.LONG
+                    is Double -> ColumnTypes.DOUBLE
+                    is String -> ColumnTypes.STRING
+                    else -> ColumnTypes.OBJECT
                 }
-                type = Math.max(type, t)
+                type = if (t > type) t else type
             }
         }
-        return if (nullable) getType(type).nullable() else getType(type)
+        return if (nullable) type.type.nullable() else type.type
     }
 
-    private fun getType(type: Int): Type<*> {
-        return when (type) {
-            1 -> IntType
-            2 -> LongType
-            3 -> DoubleType
-            4 -> StringType
-            5 -> ObjectType
-            else -> throw IllegalArgumentException()
-        }
+    private enum class ColumnTypes(val type: Type<*>): Comparable<ColumnTypes> {
+        INT(IntType),
+        LONG(LongType),
+        DOUBLE(DoubleType),
+        STRING(StringType),
+        OBJECT(ObjectType)
     }
+}
 
+object NA {
+    val double = Double.NaN
+    const val int = Int.MIN_VALUE
+    const val long = Long.MIN_VALUE
 }
 
 fun <T> T.unpack(na: T): T? {
