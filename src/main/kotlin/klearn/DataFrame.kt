@@ -47,7 +47,7 @@ interface Row {
     fun resolve(name: String): Int
 }
 
-interface Column<T> {
+interface Column<out T> {
     val size: Int
     val name: String
     val type: Type<T>
@@ -110,6 +110,11 @@ object NullableObjectType: Type<Any?>()
 
 interface DoubleColumn: Column<Double> {
     fun toVector(): Vector<Double>
+    operator fun <T: Number> plus(other: Column<T>): Column<Double>
+}
+
+interface IntColumn: Column<Int> {
+    operator fun plus(other: Column<Long>): Column<Long>
 }
 
 fun DataFrame.split(fraction: Double): Pair<DataFrame, DataFrame> = TODO()

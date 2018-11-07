@@ -2,6 +2,7 @@ package klearn.models
 
 import junit.framework.TestCase.*
 import klearn.*
+import klearn.typed.plus
 import org.junit.Test
 
 abstract class DataFrameTest {
@@ -66,6 +67,18 @@ abstract class DataFrameTest {
     fun testTypeNullability() {
         assertTrue(NullableLongType.isNullable())
         assertFalse(LongType.isNullable())
+    }
+
+    @Test
+    fun testPlus() {
+        val df = dataFrameOf("c1", "c2") (
+                10, 1.0,
+                11, 2.0,
+                12, 3.0
+        )
+
+        val c = df["c2", DoubleType] + df["c1", IntType]
+        assertEquals(listOf(11.0, 13.0, 15.0), c.iterator().toList())
     }
 
     private fun <T> Iterator<T>.toList(): List<T> {

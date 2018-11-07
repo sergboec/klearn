@@ -227,6 +227,18 @@ class KObjectColumn(override val name: String, private val data: List<*>): KAbst
 }
 
 class KDoubleColumn(override val name: String, private val data: DoubleArray): KAbstractColumn<Double>(), DoubleColumn {
+    override fun <T : Number> plus(other: Column<T>): Column<Double> {
+        assert(this.size == other.size)
+        val res = DoubleArray(size)
+        var i = 0
+        // it suppose to be not so fast
+        for (v in other.iterator()) {
+            res[i] = data[i] + v.toLong()
+            i ++
+        }
+        return KDoubleColumn(name, res)
+    }
+
     override fun get(index: Int): Double {
         return data[index]
     }
@@ -266,7 +278,11 @@ class KNullableDoubleColumn(override val name: String, private val data: DoubleA
     override fun iterator(): Iterator<Double?> = IteratorWithUnpacking(data.iterator(), NA.double)
 }
 
-class KIntColumn(override val name: String, private val data: IntArray): KAbstractColumn<Int>() {
+class KIntColumn(override val name: String, private val data: IntArray): KAbstractColumn<Int>(), IntColumn {
+    override fun plus(other: Column<Long>): Column<Long> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
     override fun get(index: Int): Int {
         return data[index]
     }
